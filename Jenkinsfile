@@ -21,15 +21,19 @@ pipeline {
             }
         }
 
-        stage('Push to DockerHub') {
-            steps {
-                script {
-                    docker.withRegistry('', 'dockerhub-credentials') {
-                        docker.image("${DOCKER_HUB_USER}/${IMAGE_NAME}:latest").push()
-                    }
-                }
+      stage('Push to DockerHub') {
+        steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                sh """
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest
+                """
             }
         }
+    }
+}
+
 
         stage('Cleanup') {
             steps {
