@@ -21,18 +21,19 @@ pipeline {
             }
         }
 
-      stage('Push to DockerHub') {
-        steps {
+ stage('Push to DockerHub') {
+    steps {
         script {
             withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                sh """
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest
+                bat """
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    docker push patilvirupakshi/ai-sentiment-analyzer:latest
                 """
             }
         }
     }
 }
+
 
 
         stage('Cleanup') {
