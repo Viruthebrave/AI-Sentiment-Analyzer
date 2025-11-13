@@ -1,17 +1,16 @@
-# Step 1: Use a lightweight Python base image
 FROM python:3.10-slim
 
-# Step 2: Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Step 3: Copy project files into the container
-COPY . .
+# Copy only requirements first (this will be cached)
+COPY requirements.txt .
 
-# Step 4: Install dependencies
+# Install dependencies (cached unless requirements.txt changes)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Step 5: Expose the app port
-EXPOSE 5000
+# Copy the rest of the application
+COPY . .
 
-# Step 6: Run the application
+# Run the app
 CMD ["python", "app.py"]
