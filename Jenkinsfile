@@ -2,43 +2,36 @@ pipeline {
     agent any
 
     environment {
-        // 🧠 Define global variables
-        IMAGE_NAME = 'ai-sentiment-analyzer'
-        DOCKER_HUB_USER = 'patilvirupakshi'
-        TELEGRAM_CHAT_ID = '5270567685'
-        // You’ll securely fetch your bot token from Jenkins credentials
+        DOCKER_HUB_USER = "patilvirupakshi"
+        IMAGE_NAME = "ai-sentiment-analyzer"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                echo '📦 Checking out code from GitHub...'
+                echo "📦 Checking out code from GitHub..."
                 git branch: 'main', url: 'https://github.com/Viruthebrave/AI-Sentiment-Analyzer.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo '🐳 Building Docker image...'
+                echo "🐳 Building Docker image..."
                 bat """
-                    docker build -t %DOCKER_HUB_USER%/%IMAGE_NAME%:latest .
+                docker build -t %DOCKER_HUB_USER%/%IMAGE_NAME%:latest .
                 """
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                echo '📤 Pushing image to DockerHub...'
+                echo "📤 Pushing image to DockerHub..."
                 script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'dockerhub-credentials',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
                         bat """
-                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                            docker push %DOCKER_USER%/%IMAGE_NAME%:latest
+                        echo %DH_PASS% | docker login -u %DH_USER% --password-stdin
+                        docker push %DH_USER%/%IMAGE_NAME%:latest
                         """
                     }
                 }
@@ -47,39 +40,37 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                echo '🧹 Cleaning up Docker images...'
+                echo "🧹 Cleaning up Docker images..."
                 bat """
-                    docker rmi -f %DOCKER_HUB_USER%/%IMAGE_NAME%:latest || exit 0
+                docker rmi -f %DOCKER_HUB_USER%/%IMAGE_NAME%:latest || exit 0
                 """
             }
         }
     }
 
     post {
+
         success {
-            echo '✅ Build, push, and cleanup completed successfully!'
-            script {
-                withCredentials([string(credentialsId: 'TELEGRAM_TOKEN', variable: 'BOT_TOKEN')]) {
-                    def message = "✅ SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n" +
-                                  "Build completed successfully!\n" +
-                                  "🔗 View logs: ${env.BUILD_URL}"
-                    bat """
-                        curl -s -X POST https://api.telegram.org/bot%BOT_TOKEN%/sendMessage -d chat_id=%TELEGRAM_CHAT_ID% -d text="${message}"
-                    """
-                }
+            echo "Build succeeded. Sending Telegram notification..."
+            withCredentials([string(credentialsId: 'BOT_TOKEN', variable: 'TOKEN')]) {
+                bat """
+                curl -s -X POST https://api.telegram.org/bot%TOKEN%/sendMessage ^
+                -d chat_id=5270567685 ^
+                -d text="SUCCESS: AI-Sentiment-CI-CD Build #%BUILD_NUMBER%25%0AView logs: http://localhost:8080/job/AI-Sentiment-CI-CD/%BUILD_NUMBER%/"
+                echo Success notification sent to Telegram.
+                """
             }
         }
 
         failure {
-            echo '❌ Build failed!'
-            script {
-                withCredentials([string(credentialsId: 'TELEGRAM_TOKEN', variable: 'BOT_TOKEN')]) {
-                    def message = "❌ FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n" +
-                                  "Check logs for details:\n🔗 ${env.BUILD_URL}"
-                    bat """
-                        curl -s -X POST https://api.telegram.org/bot%BOT_TOKEN%/sendMessage -d chat_id=%TELEGRAM_CHAT_ID% -d text="${message}"
-                    """
-                }
+            echo "Build failed. Sending Telegram notification..."
+            withCredentials([string(credentialsId: 'BOT_TOKEN', variable: 'TOKEN')]) {
+                bat """
+                curl -s -X POST https://api.telegram.org/bot%TOKEN%/sendMessage ^
+                -d chat_id=5270567685 ^
+                -d text="FAILURE: AI-Sentiment-CI-CD Build #%BUILD_NUMBER%25%0ACheck logs: http://localhost:8080/job/AI-Sentiment-CI-CD/%BUILD_NUMBER%/"
+                echo Failure notification sent to Telegram.
+                """
             }
         }
     }
