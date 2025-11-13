@@ -7,7 +7,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/Viruthebrave/AI-Sentiment-Analyzer.git'
@@ -16,11 +15,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    bat """
-                        docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest .
-                    """
-                }
+                bat "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest ."
             }
         }
 
@@ -39,9 +34,7 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                bat """
-                    docker rmi -f ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest || exit 0
-                """
+                bat "docker rmi -f ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest || exit 0"
             }
         }
     }
@@ -49,9 +42,33 @@ pipeline {
     post {
         success {
             echo '✅ Build, push, and cleanup completed successfully!'
+            emailext (
+                subject: "✅ SUCCESS: Jenkins Build - ${env.JOB_NAME}",
+                body: """
+                <h3>🎉 Jenkins Build Successful!</h3>
+                <p><b>Project:</b> ${env.JOB_NAME}</p>
+                <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Status:</b> SUCCESS ✅</p>
+                <p>View details: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                """,
+                to: 'yourgmail@gmail.com',
+                mimeType: 'text/html'
+            )
         }
         failure {
-            echo '❌ Build failed! Check console logs for details.'
+            echo '❌ Build failed! Check console logs.'
+            emailext (
+                subject: "❌ FAILED: Jenkins Build - ${env.JOB_NAME}",
+                body: """
+                <h3>⚠️ Jenkins Build Failed!</h3>
+                <p><b>Project:</b> ${env.JOB_NAME}</p>
+                <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Status:</b> FAILURE ❌</p>
+                <p>View logs: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                """,
+                to: 'yourgmail@gmail.com',
+                mimeType: 'text/html'
+            )
         }
     }
 }
